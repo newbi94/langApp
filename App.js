@@ -2,8 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import { 
   Animated, 
-  Dimensions, 
-  Pressable,
+  Dimensions,
   PanResponder,
 } from 'react-native';
 import styled from 'styled-components/native';
@@ -29,42 +28,7 @@ export default function App() {
       y: 0,
     })
   ).current;
-  
-/*   const topLeft = Animated.timing(POSITION, {
-    toValue: {
-      x: -SCREEN_WIDTH / 2 + 100,
-      y: -SCREEN_HEIGHT / 2 + 100,
-    },
-    useNativeDriver: false,
-  });
-  const bottomLeft = Animated.timing(POSITION, {
-    toValue: {
-      x: -SCREEN_WIDTH / 2 + 100,
-      y: SCREEN_HEIGHT / 2 - 100,
-    },
-    useNativeDriver: false,
-  });
-  const bottomRight = Animated.timing(POSITION, {
-    toValue: {
-      x: SCREEN_WIDTH / 2 - 100,
-      y: SCREEN_HEIGHT / 2 - 100,
-    },
-    useNativeDriver: false,
-  });
-  const topRight = Animated.timing(POSITION, {
-    toValue: {
-      x: SCREEN_WIDTH / 2 - 100,
-      y: -SCREEN_HEIGHT / 2 + 100,
-    },
-    useNativeDriver: false,
-  });
-  
-  const moveUp = () => {
-    Animated.loop(
-      Animated.sequence([bottomLeft, bottomRight, topRight, topLeft])
-    ).start();
-  } *///Animated.sequence([ ~ ]) array형태로 여러 애니메이션을 넣어 순서대로 실행시킨다.
-  //Animated.loop( ~ ) 괄호 안의 애니메이션을 반복하여 실행한다.
+
   const borderRadius = POSITION.y.interpolate({
     inputRange: [-300, 300],
     outputRange: [100, 0],
@@ -75,28 +39,53 @@ export default function App() {
   });
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true, //터치 감지에 대한 함수, 드래그를 하려면 필수적인 시작부분이라 할 수 있다.
-      onPanResponderMove:(_, { dx ,dy }) =>{
+      onStartShouldSetPanResponder: () => true, 
+      onPanResponderGrant: () => { //터치가 시작될 때 호출되는 함수
+        console.log("Touch Started");
+        POSITION.setOffset({
+          x: POSITION.x._value,
+          y: POSITION.y._value,
+        })
+        console.log(POSITION.x._value,POSITION.y._value)
+      },
+        //x: POSITON.x라고 해주면 number가 아니라는 에러가 뜬다.
+        //POSITON.x는 여러 함수가 포함된 Animated.Value를 받아오는 것.
+        //setOffset은 아래 onPanResponderMove의 POSITION.setValue를 통한 드래그를 구현하는 과정 중
+        //터치 오프후 다시 터치시 중앙(0의 위치)에서 시작되는 것을 방지하고 터치 오프할 때의 위치에서
+        //계속해서 드래그를 진행하기 위해 사용하는 메소드이다.
+        //onPanResponderMove의 dx,dy값은 말 그대로 터치후부터 터치오프까지의 '거리' 이기 때문에
+        //터치 오프후 다시 터치를 하면 dx,dy값은 0부터 시작하여 POSITION.setValue를 통해 x와 y를 0으로 즉시 변경,
+        //박스가 중앙으로 순간이동한후 드래그된다.
+        //setOffset은 터치가 시작할 때 0부터 시작하지 않고 전의 좌표 값을 적용시켜 (전의 좌표 값) + (터치후 이동거리)
+        //로 계산하여 이어서 드래그할 수 있게 해준다.
+      
+      onPanResponderMove:(_, { dx ,dy }) =>{ //터치 중일 때 호출되는 함수
+        console.log("Finger Moving");
         POSITION.setValue({
           x: dx,
           y: dy,
-        })//Animated.Value의 값은 직접 수정할 수 없고 setValue를 통해 수정한다.
-        console.log(dx, dy)
+        })
+      },
+      onPanResponderRelease: () => { //터치가 끝났을 때 호출되는 함수
+        console.log("Touch Finished");
+        POSITION.flattenOffset();
       }
+      //flattenOffset() Offset의 값이 누적되는 것을 막기위한 메소드. 값을 0으로 비워준다.
+
+      /*  onPanResponderRelease: () => {
+        Animated.spring(POSITION,{
+          toValue: {
+            x:0,
+            y:0,
+          },
+          bounciness: 20,
+          useNativeDriver: false,
+        }).start(); 
+        드래그후 손을 뗐을 때 중앙으로 돌아가는 애니메이션
+        */
     })
   ).current;
-  /* 모든(?) panResponder.create안에 담긴 함수들은 
-  (evt, gestureState)를 argument로 갖는다. 참조: https://reactnative.dev/docs/panresponder
-  PanResponder역시 드래그나 여러 동작에서 값이 변해도 re-rendering되지 않아야 하므로
-  useRef( ~ )로 감싸준다.
-
-  gestureState객체 내의 dx,dy의 값은 박스 클릭후 손을 떼지 않고 드래그한 거리를 나타낸다.
-  그것으로 setValue를 통해 POSITION의 value값을 바꿔줌으로써 박스를 드래그로
-  위치이동 시킬 수 있게 되었다. 
-  */
   
-    //backgroundcolor를 animate하는 것은 native-driver: true 일 때에는 
-    //사용할 수 없다. 굳이 사용하고 싶다면 false로 두고 사용할 것.
     return (
       <Container>
           <AnimatedBox
@@ -110,11 +99,5 @@ export default function App() {
       </Container>
     );
   }
-/*   getTranslateTransform() => 
-  기존의 
-  transform: [ 
-            translateX: POSITION.x, 
-            translateY: POSITION.y,
-        ]    
-  를 간소화 시킬수 있는 메소드다. */
+
   
