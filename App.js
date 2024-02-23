@@ -1,175 +1,183 @@
-import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useRef, useState } from 'react';
-import { 
-  View,
-  Animated, 
-  Dimensions,
-  PanResponder,
-} from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Animated, Easing, PanResponder, Text, View } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from "@expo/vector-icons";
-import icons from './icons';
+import icons from "./icons"
 
-
+const BLACK_COLOR = "#1e272e";
+const GREY = "#485460";
+const GREEN = "#2ecc71";
+const RED = "#e74c3c";
 
 const Container = styled.View`
-  flex:1;
-  justify-content: center;
-  align-items: center;
-  background-color: #00a8ff;
+  flex: 1;
+  background-color: ${BLACK_COLOR};
 `;
-
-const Card = styled(Animated.createAnimatedComponent(View))`
-  background-color: white;
-  width: 300px;
-  height: 300px;
+const Edge = styled.View`
+  flex: 1;
   justify-content: center;
   align-items: center;
-  border-radius: 12px;
-  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.2);
+`;
+const WordContainer = styled(Animated.createAnimatedComponent(View))`
+  width: 100px;
+  height: 100px;
+  justify-content: center;
+  align-items: center;
+  background-color: ${GREY};
+  border-radius: 50px;
+`;
+const Word = styled.Text`
+  font-size: 38px;
+  font-weight: 500;
+  color: ${(props) => props.color};
+`;
+const Center = styled.View`
+  flex: 3;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+`;
+//z-index는 높을수록 상위 레이어에 표시된다. position absolute와 헷갈린다.
+//스타일 속성 옆에 //를 달고 주석이 되는 듯하나, 에러가 뜬다..
+//되질 말게 하던가
+const IconCard = styled(Animated.createAnimatedComponent(View))`
+  background-color: white;
+  padding: 10px 20px;
+  border-radius: 10px;
+  z-index: 10;
   position: absolute;
 `;
-//box-shadow가 입체감을 불어 넣는다.
-//position: absolute는 모든 Card의 위치를 똑같이 위치시킨다.
-//즉 겹치게 된다.
 
-/* const Card = styled.View``;
-const AnimatedCard = Animated.createAnimatedComponent(Card); 
-이렇게 구성하면 아래 return 파트에서 태그 내에 Animated관련 자동완성기능이
-작동하지 않는다. 저번엔 니꼬가 이게 좋다더니 이제와서 바꾸다니
-*/
-
-const Btn = styled.TouchableOpacity`
-  margin: 0px 10px;
-`;
-
-const BtnContainer = styled.View`
-  flex-direction: row;
-  flex: 1;
-`;
-
-const CardContainer = styled.View`
-  flex:3;
-  justify-content: center;
-  align-items: center;
-`;
 
 
 export default function App() {
-  
-  const scale = useRef(new Animated.Value(1)).current; 
-
-  const position = useRef(new Animated.Value(0)).current;
-  
-  const rotation = position.interpolate({
-    inputRange:[-250, 250],
-    outputRange:["-15deg", "15deg"],
-    extrapolate: "clamp"
-  });
-  const secondScale = position.interpolate({
-    inputRange: [-300, 0 , 300],
-    outputRange: [1, 0.7 , 1],
+  //Values
+  const position = useRef(new Animated.ValueXY({
+    x: 0, y: 0,})).current;
+  const scale = useRef(new Animated.Value(1)).current;
+  const scaleOne = position.y.interpolate({
+    inputRange: [-300, -80],
+    outputRange: [2, 1],
     extrapolate: "clamp",
-  })
+  });
+  const scaleTwo = position.y.interpolate({
+    inputRange: [80, 300],
+    outputRange: [1, 2],
+    extrapolate: "clamp",
+  });
+  const opacity = useRef(new Animated.Value(1)).current;
 
-  const onPressIn = Animated.spring(scale, { 
-      toValue: 0.95, 
-      useNativeDriver: true 
+  //Animations
+  const onPressIn = Animated.spring(scale, {
+    toValue: 0.9,
+    useNativeDriver: true,
+  });   
+  const onPressOut = Animated.spring(scale, {
+    toValue: 1,
+    useNativeDriver:true,
   });
-  const onPressOut = Animated.spring(scale, { 
-    toValue: 1, 
-    useNativeDriver: true 
-  });
-  const goCenter = Animated.spring(position, { 
-    toValue: 0, 
+  const backHome = Animated.spring(position, {
+    toValue: 0,
     useNativeDriver: true,
   });
-  const goLeft = Animated.spring(position, { 
-    toValue: -500, 
-    tension: 5, 
-    useNativeDriver: true, 
-    restDisplacementThreshold: 150,
-    restSpeedThreshold: 1000,
-  })
-  const goRight = Animated.spring(position, { 
-    toValue: 500, 
-    tension: 5, 
+  const drop = Animated.timing(scale, {
+    toValue: 0,
+    duration: 50,
+    easing: Easing.linear,
     useNativeDriver: true,
-    restDisplacementThreshold: 150, //남은 거리에 따라 애니메이션을 끝낸다.
-    restSpeedThreshold: 1000, //남은 속도에 따라 애니메이션을 끝낸다.
+  });
+  const beOpacity = Animated.timing(opacity, {
+    toValue: 0,
+    duration: 50,
+    easing: Easing.linear, //투명해지는 속도가 일정하게
+    useNativeDriver: true,
+  });
+  const rePop = Animated.spring(scale, {
+    toValue: 1,
+    useNativeDriver: true,
+  });
+
+  const unOpacity = Animated.spring(opacity, {
+    toValue: 1,
+    useNativeDriver: true,
+  });
+  const goHome = Animated.timing(position, {
+    toValue: 0,
+    duration: 50,
+    easing: Easing.linear,
+    useNativeDriver: true,
+  });
+
+  //spring으로 하면 빠른 복귀도 어려울 뿐더러, 끝에 가서 미세한 진동으로
+  //동작 완료가 지연되어 다음 동작이 느려진다.
+
+  //PanResponders
+  const panResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => {
+      onPressIn.start();
+    },
+    onPanResponderMove: (_,{ dx, dy }) => {
+      position.setValue({
+        x: dx,
+        y: dy,
+      })
+      console.log(dy)
+    },
+    onPanResponderRelease: (_, { dy }) => {
+     if(dy > 250 || dy < -250) {
+      Animated.sequence([
+        Animated.parallel([
+        drop, beOpacity
+      ]),
+      goHome,
+    ]).start(nextIcon)
+     } else {
+      Animated.parallel([
+        onPressOut,backHome,
+      ]).start();
+     }
+    },
   })
-  //spring 애니메이션 특성상 애니메이션이 끝나기까지 시간이 꽤 걸린다.
-  //육안으로 끝나 보여도 진동이 1~3초간 남아 있는데, 아래 onDismiss함수는
-  //이 spring의 애니메이션이 완전히 끝나야 실행되기 때문에 카드를 넘기고
-  //즉시 바로 또 넘길 수가 없는 것.
-  //rest~Threshold 프로퍼티들은 그러한 것들을 속도나, 거리면에서 조정해준다.
-  const closePress = () => goLeft.start(onDismiss);
-  const checkPress = () => goRight.start(onDismiss);
-  
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-
-      onPanResponderMove: (_, {dx}) => {
-        position.setValue(dx);
-      },
-
-      onPanResponderGrant: () => onPressIn.start(),
-
-      onPanResponderRelease: (_, { dx }) => {
-        if (dx < -250) {
-          goLeft.start(onDismiss);
-        } else if (dx > 250) {
-          goRight.start(onDismiss);
-        } else {
-        Animated.parallel([ onPressOut, goCenter ]).start();
-        }
-      },
-    })
-  ).current;
-  const [index, setIndex] = useState(0);
-
-  const onDismiss = () => {
-    setIndex((prev) => prev + 1);
-    position.setValue(0);
-    scale.setValue(1);
-  }
-
+  ).current
+//States
+const [index, setIndex] = useState(0);
+const nextIcon = () => {
+  setIndex((prev) => prev+1)
+  Animated.parallel([
+    rePop,unOpacity
+  ]).start();
+}
     return (
       <Container>
-        <CardContainer>
-        <Card 
-          style={{
-            transform: [
-              { scale: secondScale },
-            ],
-          }}
-        >
-          <Ionicons name={icons[index+1]} color="#192a56" size={98} />
-        </Card>
-        <Card 
+        <Edge>
+          <WordContainer style={{transform:[{scale: scaleOne}]}}>
+            <Word color={GREEN}>알아</Word>
+          </WordContainer>
+        </Edge>
+        <Center>
+          <IconCard
           {...panResponder.panHandlers}
           style={{
+            opacity,
             transform: [
-              { scale },
-              {translateX: position},
-              {rotateZ: rotation},
-            ],
+              ...position.getTranslateTransform(),
+              {scale},
+            ]
           }}
-        >
-          <Ionicons name={icons[index]} color="#192a56" size={98} />
-        </Card>
-        </CardContainer>
-        <BtnContainer>
-          <Btn onPress={closePress}>
-            <Ionicons name="close-circle" color="white" size={58} />
-          </Btn>
-          <Btn onPress={checkPress}>
-            <Ionicons name="checkmark-circle" color="white" size={58} />
-          </Btn>
-        </BtnContainer>
+          >
+            <Ionicons name={icons[index]} color={GREY} size={66} />
+          </IconCard>
+        </Center>
+        <Edge>
+          <WordContainer style={{transform:[{scale: scaleTwo}]}}>
+            <Word color={RED}>몰라</Word>
+          </WordContainer>
+        </Edge>
       </Container>
     );
-  }
-
-  
+  };
+  //transform: 내부에 postion~ 와 {scale}의 위치에 따라
+  //애니메이션이 미세하게 달라지고 그에 따라 어색하거나 자연스럽게 보인다.
+  //지금 {scale}이 position~보다 앞에 있으면, 카드가 작아지면서 중앙으로 돌아오는
+  //모습이 찰나에 보인다. 때문에 상단과 하단부에서 사라지는 모습처럼 보이지 않는다.
