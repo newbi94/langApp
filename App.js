@@ -37,9 +37,6 @@ const Center = styled.View`
   align-items: center;
   z-index: 10;
 `;
-//z-index는 높을수록 상위 레이어에 표시된다. position absolute와 헷갈린다.
-//스타일 속성 옆에 //를 달고 주석이 되는 듯하나, 에러가 뜬다..
-//되질 말게 하던가
 const IconCard = styled(Animated.createAnimatedComponent(View))`
   background-color: white;
   padding: 10px 20px;
@@ -48,19 +45,22 @@ const IconCard = styled(Animated.createAnimatedComponent(View))`
   position: absolute;
 `;
 
-
-
 export default function App() {
+
   //Values
-  const position = useRef(new Animated.ValueXY({
+  const a = useRef(new Animated.ValueXY({
     x: 0, y: 0,})).current;
+  const upperPosition = useRef(new Animated.ValueXY({
+    x: 0, y: 330,})).current;
+  const lowerPosition = useRef(new Animated.ValueXY({
+    x: 0, y: -330,})).current;
   const scale = useRef(new Animated.Value(1)).current;
-  const scaleOne = position.y.interpolate({
+  const scaleOne = a.y.interpolate({
     inputRange: [-300, -80],
     outputRange: [2, 1],
     extrapolate: "clamp",
   });
-  const scaleTwo = position.y.interpolate({
+  const scaleTwo = a.y.interpolate({
     inputRange: [80, 300],
     outputRange: [1, 2],
     extrapolate: "clamp",
@@ -76,7 +76,7 @@ export default function App() {
     toValue: 1,
     useNativeDriver:true,
   });
-  const backHome = Animated.spring(position, {
+  const backHome = Animated.spring(a, {
     toValue: 0,
     useNativeDriver: true,
   });
@@ -89,7 +89,7 @@ export default function App() {
   const beOpacity = Animated.timing(opacity, {
     toValue: 0,
     duration: 50,
-    easing: Easing.linear, //투명해지는 속도가 일정하게
+    easing: Easing.linear,
     useNativeDriver: true,
   });
   const rePop = Animated.spring(scale, {
@@ -101,15 +101,12 @@ export default function App() {
     toValue: 1,
     useNativeDriver: true,
   });
-  const goHome = Animated.timing(position, {
+  const goHome = Animated.timing(a, {
     toValue: 0,
     duration: 50,
     easing: Easing.linear,
     useNativeDriver: true,
   });
-
-  //spring으로 하면 빠른 복귀도 어려울 뿐더러, 끝에 가서 미세한 진동으로
-  //동작 완료가 지연되어 다음 동작이 느려진다.
 
   //PanResponders
   const panResponder = useRef(PanResponder.create({
@@ -117,12 +114,13 @@ export default function App() {
     onPanResponderGrant: () => {
       onPressIn.start();
     },
-    onPanResponderMove: (_,{ dx, dy }) => {
-      position.setValue({
-        x: dx,
-        y: dy,
+    onPanResponderMove: (evt,ges) => {
+      a.setValue({
+        x: ges.dx,
+        y: ges.dy,
       })
-      console.log(dy)
+      console.log('lowerPosition.x:', lowerPosition.x);
+      console.log('lowerPosition.y:', lowerPosition.y);
     },
     onPanResponderRelease: (_, { dy }) => {
      if(dy > 250 || dy < -250) {
@@ -140,6 +138,7 @@ export default function App() {
     },
   })
   ).current
+
 //States
 const [index, setIndex] = useState(0);
 const nextIcon = () => {
@@ -147,12 +146,20 @@ const nextIcon = () => {
   Animated.parallel([
     rePop,unOpacity
   ]).start();
-}
+};
+
+const frontWord = 
+  icons[index].substring(0,Math.round(icons[index].length/2))
+
+const behindWord = 
+icons[index].substring(Math.round(icons[index].length/2))
+
+
     return (
       <Container>
         <Edge>
           <WordContainer style={{transform:[{scale: scaleOne}]}}>
-            <Word color={GREEN}>알아</Word>
+            <Word color={GREEN}>{frontWord}</Word>
           </WordContainer>
         </Edge>
         <Center>
@@ -161,7 +168,7 @@ const nextIcon = () => {
           style={{
             opacity,
             transform: [
-              ...position.getTranslateTransform(),
+              ...a.getTranslateTransform(),
               {scale},
             ]
           }}
@@ -170,14 +177,22 @@ const nextIcon = () => {
           </IconCard>
         </Center>
         <Edge>
-          <WordContainer style={{transform:[{scale: scaleTwo}]}}>
-            <Word color={RED}>몰라</Word>
+          <WordContainer 
+          
+          style={{
+            transform:[
+              {translateX: lowerPosition.x},
+              {translateY: 50},
+              {scale: scaleTwo},
+              ]}}>
+            <Word color={RED}>{behindWord}</Word>
           </WordContainer>
         </Edge>
       </Container>
     );
   };
-  //transform: 내부에 postion~ 와 {scale}의 위치에 따라
-  //애니메이션이 미세하게 달라지고 그에 따라 어색하거나 자연스럽게 보인다.
-  //지금 {scale}이 position~보다 앞에 있으면, 카드가 작아지면서 중앙으로 돌아오는
-  //모습이 찰나에 보인다. 때문에 상단과 하단부에서 사라지는 모습처럼 보이지 않는다.
+  //아래 동그라미의 translateY: -330으로 설정하면 (dy:-330이 중앙에서 아래 동그라미까지의 값이다)
+  //중앙으로 오게된다. 영겁의 시간을 거쳐 -200으로 설정하니 알게됐다.
+  //아래 동그라미의 영역은 Edge에 의해 화면의 5분의 1크기이다.
+  //
+  // 비슷하게 접근했는데, 조금 다른 것 같다..
